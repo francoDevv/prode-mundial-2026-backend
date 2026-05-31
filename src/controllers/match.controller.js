@@ -98,3 +98,29 @@ export const getMatchesWithUserPredictions = async (req, res) => {
         });
     }
 };
+
+export const getNextArgentinaMatch = async (req, res) => {
+    try {
+
+        const match = await Match.findOne({
+            status: "TIMED",
+            $or: [
+                { homeTeam: "Argentina" },
+                { awayTeam: "Argentina" }
+            ]
+        }).sort({
+            startDate: 1
+        });
+
+        res.status(200).json({
+            match
+        });
+
+    } catch (error) {
+        console.log(error);
+
+        res.status(500).json({
+            message: "Error al obtener próximo partido de Argentina"
+        });
+    }
+};
