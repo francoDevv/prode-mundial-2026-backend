@@ -124,3 +124,49 @@ export const getNextArgentinaMatch = async (req, res) => {
         });
     }
 };
+
+export const getTodayMatches = async (req, res) => {
+    try {
+        const today = new Date();
+
+        const startOfDay = new Date(today);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(today);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const matches = await Match.find({
+            startDate: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        }).sort({
+            startDate: 1
+        });
+
+        if (matches.length === 0) {
+            const upcomingMatches = await Match.find({
+                status: "TIMED"
+            })
+                .sort({ startDate: 1 })
+                .limit(5);
+
+            return res.status(200).json({
+                matches,
+                upcomingMatches
+            });
+        }
+
+        res.status(200).json({
+            matches,
+            upcomingMatches: []
+        });
+
+    } catch (error) {
+        console.log(error);
+
+        res.status(500).json({
+            message: "Error al obtener partidos de hoy"
+        });
+    }
+};
