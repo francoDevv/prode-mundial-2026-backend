@@ -7,7 +7,12 @@ dotenv.config();
 
 connectDB();
 
-startSyncMatchesJob();
+if (process.env.ENABLE_SYNC_JOB === "true") {
+    console.log("Cron de sincronización ACTIVADO");
+    startSyncMatchesJob();
+} else {
+    console.log("Cron de sincronización DESACTIVADO");
+}
 
 const PORT = process.env.PORT || 8080;
 
