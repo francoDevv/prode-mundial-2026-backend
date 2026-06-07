@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "deploy": "gcloud run deploy prode-backend --source . --project=hydroseteint --region=us-central1 --allow-unauthenticated --set-secrets=\"MONGO_URI=PRODE_MONGO_URI:latest,JWT_SECRET=PRODE_JWT_SECRET:latest,JWT_EXPIRES_IN=PRODE_JWT_EXPIRES_IN:latest,FOOTBALL_API_TOKEN=PRODE_FOOTBALL_API_TOKEN:latest,FOOTBALL_API_BASE_URL=PRODE_FOOTBALL_API_BASE_URL:latest,FOOTBALL_WORLD_CUP_CODE=PRODE_FOOTBALL_WORLD_CUP_CODE:latest,ENABLE_SYNC_JOB=PRODE_ENABLE_SYNC_JOB:latest\""
   },
   "keywords": [],
   "author": "",

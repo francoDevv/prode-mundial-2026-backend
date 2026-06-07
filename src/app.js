@@ -13,9 +13,21 @@ const app = express();
 
 app.use(express.json());
 
-app.use(cors ({
-    origin: "http://localhost:5173",
-    credentials: true
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://prode.hydroseteint.com",
+    "https://prode-hydroseteint.web.app",
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    credentials: true,
 }));
 
 app.use(cookieParser());

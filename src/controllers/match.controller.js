@@ -66,28 +66,52 @@ export const getMatches = async (req, res) => {
 
 export const getMatchesWithUserPredictions = async (req, res) => {
     try {
-        const matches = await Match.find().sort({ startDate: 1 });
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = 10;
+        const skip = (page - 1) * limit;
+        const { status = "all", journey = "all" } = req.query;
 
-        const predictions = await Prediction.find({
-            user: req.user._id
-        });
+        const now = new Date();
+        const matchQuery = {};
+
+        if (journey === "matchday-1") { matchQuery.stage = "GROUP_STAGE"; matchQuery.matchday = 1; }
+        else if (journey === "matchday-2") { matchQuery.stage = "GROUP_STAGE"; matchQuery.matchday = 2; }
+        else if (journey === "matchday-3") { matchQuery.stage = "GROUP_STAGE"; matchQuery.matchday = 3; }
+        else if (journey === "knockout") { matchQuery.stage = { $ne: "GROUP_STAGE" }; }
+
+        if (status === "closed") {
+            matchQuery.startDate = { $lte: now };
+        } else if (status === "pending" || status === "predicted") {
+            matchQuery.startDate = { $gt: now };
+            const userPredictions = await Prediction.find({ user: req.user._id }).select("match");
+            const predictedMatchIds = userPredictions.map((p) => p.match);
+            matchQuery._id = status === "pending"
+                ? { $nin: predictedMatchIds }
+                : { $in: predictedMatchIds };
+        }
+
+        const [total, matches] = await Promise.all([
+            Match.countDocuments(matchQuery),
+            Match.find(matchQuery).sort({ startDate: 1 }).skip(skip).limit(limit),
+        ]);
+
+        const matchIds = matches.map((m) => m._id);
+        const predictions = await Prediction.find({ user: req.user._id, match: { $in: matchIds } });
 
         const matchesWithPredictions = matches.map((match) => {
-            const prediction = predictions.find((prediction) => {
-                return prediction.match.toString() === match._id.toString();
-            });
-
-            const now = new Date();
-
+            const prediction = predictions.find((p) => p.match.toString() === match._id.toString());
             return {
                 ...match.toObject(),
                 prediction: prediction || null,
-                predictionClosed: now >= match.startDate
+                predictionClosed: now >= match.startDate,
             };
         });
 
         res.status(200).json({
-            matches: matchesWithPredictions
+            matches: matchesWithPredictions,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
         });
 
     } catch (error) {
