@@ -1,13 +1,8 @@
 import Prediction from "../models/Prediction.js";
 import User from "../models/User.js";
-import { getCache, setCache } from "../services/cache.service.js";
 
 export const getMyStats = async (req, res) => {
     try {
-        const cacheKey = `stats:${req.user._id}`;
-        const cached = getCache(cacheKey);
-        if (cached) return res.status(200).json(cached);
-
         const user = await User.findById(req.user._id).select(
             "name username totalPoints"
         );
@@ -52,7 +47,6 @@ export const getMyStats = async (req, res) => {
             }
         };
 
-        setCache(cacheKey, response);
         res.status(200).json(response);
         
         

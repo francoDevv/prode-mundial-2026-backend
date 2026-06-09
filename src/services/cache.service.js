@@ -10,7 +10,7 @@ export const getCache = (key) => {
     return item.value;
 };
 
-export const setCache = (key, value, ttlMs = 30 * 60 * 1000) => {
+export const setCache = (key, value, ttlMs = 5 * 60 * 1000) => {
     store.set(key, {
         value,
         expiresAt: Date.now() + ttlMs,

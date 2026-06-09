@@ -83,5 +83,5 @@ const syncMatchesJob = async () => {
 };
 
 export const startSyncMatchesJob = () => {
-    cron.schedule("*/30 * * * *", syncMatchesJob);
+    cron.schedule("*/5 * * * *", syncMatchesJob);
 };

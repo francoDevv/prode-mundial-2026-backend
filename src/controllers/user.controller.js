@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
+import { clearCache } from "../services/cache.service.js";
 
 export const getUsers = async (req, res) => {
     try {
@@ -35,6 +36,7 @@ export const createUser = async (req, res) => {
         });
 
         await newUser.save();
+        clearCache();
 
         res.status(201).json({
             message: "Usuario creado correctamente",

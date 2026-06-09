@@ -72,10 +72,6 @@ export const getMatchesWithUserPredictions = async (req, res) => {
         const skip = (page - 1) * limit;
         const { status = "all", journey = "all" } = req.query;
 
-        const cacheKey = `matches:${req.user._id}:${page}:${status}:${journey}`;
-        const cached = getCache(cacheKey);
-        if (cached) return res.status(200).json(cached);
-
         const now = new Date();
         const matchQuery = {};
 
@@ -112,15 +108,12 @@ export const getMatchesWithUserPredictions = async (req, res) => {
             };
         });
 
-        const response = {
+        res.status(200).json({
             matches: matchesWithPredictions,
             total,
             page,
             totalPages: Math.ceil(total / limit),
-        };
-
-        setCache(cacheKey, response);
-        res.status(200).json(response);
+        });
 
     } catch (error) {
         console.log(error);
