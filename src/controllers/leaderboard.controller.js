@@ -1,61 +1,60 @@
 import User from "../models/User.js";
 import Prediction from "../models/Prediction.js";
+import { getCache, setCache } from "../services/cache.service.js";
 
 export const getLeaderboard = async (req, res) => {
     try {
-        const users = await User.find({ isActive: true })
-            .select("name username totalPoints")
-            .sort({ totalPoints: -1, name: 1 });
+        const cached = getCache("leaderboard");
+        if (cached) return res.status(200).json(cached);
 
-        const leaderboard = [];
+        const [users, predictions] = await Promise.all([
+            User.find({ isActive: true })
+                .select("name username totalPoints")
+                .sort({ totalPoints: -1, name: 1 }),
+            Prediction.find({ calculated: true }).select("user points"),
+        ]);
 
-        for (let i = 0; i < users.length; i++) {
-            const user = users[i];
+        const predictionsByUser = {};
+        for (const p of predictions) {
+            const uid = p.user.toString();
+            if (!predictionsByUser[uid]) predictionsByUser[uid] = [];
+            predictionsByUser[uid].push(p);
+        }
 
-            const predictions = await Prediction.find({
-                user: user._id,
-                calculated: true
-            });
-
-            const exactResults = predictions.filter(
-                (prediction) => prediction.points === 3
-            ).length;
-
-            const correctWinner = predictions.filter(
-                (prediction) => prediction.points === 1
-            ).length;
-
-            leaderboard.push({
+        const leaderboard = users.map((user, i) => {
+            const userPredictions = predictionsByUser[user._id.toString()] || [];
+            return {
                 position: i + 1,
                 id: user._id,
                 name: user.name,
                 username: user.username,
                 totalPoints: user.totalPoints,
-                exactResults,
-                correctWinner
-            });
-        }
-
-        res.status(200).json({
-            leaderboard
+                exactResults: userPredictions.filter((p) => p.points === 3).length,
+                correctWinner: userPredictions.filter((p) => p.points === 1).length,
+            };
         });
+
+        const response = { leaderboard };
+        setCache("leaderboard", response);
+
+        res.status(200).json(response);
 
     } catch (error) {
         console.log(error);
-
-        res.status(500).json({
-            message: "Error al obtener el ranking"
-        });
+        res.status(500).json({ message: "Error al obtener el ranking" });
     }
 };
 
 export const getGroupStageLeaderboard = async (req, res) => {
     try {
+        const cached = getCache("leaderboard:group-stage");
+        if (cached) return res.status(200).json(cached);
+
         const predictions = await Prediction.find({
             calculated: true
         })
             .populate("user", "name username isActive")
-            .populate("match");
+            .populate("match", "stage matchday");
 
         const result = {};
 
@@ -121,13 +120,11 @@ export const getGroupStageLeaderboard = async (req, res) => {
             };
         }
 
+        setCache("leaderboard:group-stage", result);
         res.status(200).json(result);
 
     } catch (error) {
         console.log(error);
-
-        res.status(500).json({
-            message: "Error al obtener ranking por fechas"
-        });
+        res.status(500).json({ message: "Error al obtener ranking por fechas" });
     }
 };

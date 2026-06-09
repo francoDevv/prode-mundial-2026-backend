@@ -4,6 +4,7 @@ import Prediction from "../models/Prediction.js";
 import User from "../models/User.js";
 import { getWorldCupMatchesFromApi } from "../services/footballApi.service.js";
 import { calculatePredictionPoints } from "../services/points.service.js";
+import { clearCache } from "../services/cache.service.js";
 
 const syncMatchesJob = async () => {
     try {
@@ -73,6 +74,7 @@ const syncMatchesJob = async () => {
             await user.save();
         }
 
+        clearCache();
         console.log("Sincronización finalizada");
 
     } catch (error) {

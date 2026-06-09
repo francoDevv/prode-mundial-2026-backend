@@ -68,6 +68,10 @@ const matchSchema = new mongoose.Schema(
     }
 )
 
+matchSchema.index({ startDate: 1 });
+matchSchema.index({ stage: 1, matchday: 1 });
+matchSchema.index({ status: 1, startDate: 1 });
+
 const Match = mongoose.model("Match", matchSchema);
 
 export default Match;

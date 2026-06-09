@@ -1,6 +1,7 @@
 import Match from "../models/Match.js";
 import { getWorldCupMatchesFromApi } from "../services/footballApi.service.js";
 import Prediction from "../models/Prediction.js";
+import { getCache, setCache } from "../services/cache.service.js";
 
 export const syncMatches = async (req, res) => {
     try {
@@ -71,6 +72,10 @@ export const getMatchesWithUserPredictions = async (req, res) => {
         const skip = (page - 1) * limit;
         const { status = "all", journey = "all" } = req.query;
 
+        const cacheKey = `matches:${req.user._id}:${page}:${status}:${journey}`;
+        const cached = getCache(cacheKey);
+        if (cached) return res.status(200).json(cached);
+
         const now = new Date();
         const matchQuery = {};
 
@@ -107,12 +112,15 @@ export const getMatchesWithUserPredictions = async (req, res) => {
             };
         });
 
-        res.status(200).json({
+        const response = {
             matches: matchesWithPredictions,
             total,
             page,
             totalPages: Math.ceil(total / limit),
-        });
+        };
+
+        setCache(cacheKey, response);
+        res.status(200).json(response);
 
     } catch (error) {
         console.log(error);
@@ -125,6 +133,8 @@ export const getMatchesWithUserPredictions = async (req, res) => {
 
 export const getNextArgentinaMatch = async (req, res) => {
     try {
+        const cached = getCache("matches:next-argentina");
+        if (cached) return res.status(200).json(cached);
 
         const match = await Match.findOne({
             status: "TIMED",
@@ -132,25 +142,23 @@ export const getNextArgentinaMatch = async (req, res) => {
                 { homeTeam: "Argentina" },
                 { awayTeam: "Argentina" }
             ]
-        }).sort({
-            startDate: 1
-        });
+        }).sort({ startDate: 1 });
 
-        res.status(200).json({
-            match
-        });
+        const response = { match };
+        setCache("matches:next-argentina", response);
+        res.status(200).json(response);
 
     } catch (error) {
         console.log(error);
-
-        res.status(500).json({
-            message: "Error al obtener próximo partido de Argentina"
-        });
+        res.status(500).json({ message: "Error al obtener próximo partido de Argentina" });
     }
 };
 
 export const getTodayMatches = async (req, res) => {
     try {
+        const cached = getCache("matches:today");
+        if (cached) return res.status(200).json(cached);
+
         const today = new Date();
 
         const startOfDay = new Date(today);
@@ -160,37 +168,26 @@ export const getTodayMatches = async (req, res) => {
         endOfDay.setHours(23, 59, 59, 999);
 
         const matches = await Match.find({
-            startDate: {
-                $gte: startOfDay,
-                $lte: endOfDay
-            }
-        }).sort({
-            startDate: 1
-        });
+            startDate: { $gte: startOfDay, $lte: endOfDay }
+        }).sort({ startDate: 1 });
+
+        let response;
 
         if (matches.length === 0) {
-            const upcomingMatches = await Match.find({
-                status: "TIMED"
-            })
+            const upcomingMatches = await Match.find({ status: "TIMED" })
                 .sort({ startDate: 1 })
                 .limit(5);
 
-            return res.status(200).json({
-                matches,
-                upcomingMatches
-            });
+            response = { matches, upcomingMatches };
+        } else {
+            response = { matches, upcomingMatches: [] };
         }
 
-        res.status(200).json({
-            matches,
-            upcomingMatches: []
-        });
+        setCache("matches:today", response);
+        res.status(200).json(response);
 
     } catch (error) {
         console.log(error);
-
-        res.status(500).json({
-            message: "Error al obtener partidos de hoy"
-        });
+        res.status(500).json({ message: "Error al obtener partidos de hoy" });
     }
 };

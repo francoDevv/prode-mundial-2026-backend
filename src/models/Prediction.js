@@ -41,7 +41,9 @@ const predictionSchema = new mongoose.Schema(
     }
 );
 
-predictionSchema.index({ user: 1, match: 1}, {unique: true});
+predictionSchema.index({ user: 1, match: 1 }, { unique: true });
+predictionSchema.index({ user: 1 });
+predictionSchema.index({ match: 1, calculated: 1 });
 
 const Prediction = mongoose.model("Prediction", predictionSchema);
 

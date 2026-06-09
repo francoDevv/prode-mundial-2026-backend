@@ -42,6 +42,9 @@ const userSchema = new mongoose.Schema(
     }
 );
 
+userSchema.index({ totalPoints: -1 });
+userSchema.index({ isActive: 1, totalPoints: -1 });
+
 const User = mongoose.model("User", userSchema);
 
 export default User;
