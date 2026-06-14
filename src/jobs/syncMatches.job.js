@@ -13,23 +13,35 @@ const syncMatchesJob = async () => {
         const matches = await getWorldCupMatchesFromApi();
 
         for (const apiMatch of matches) {
+            const updateData = {
+                apiMatchId: apiMatch.id,
+                homeTeam: apiMatch.homeTeam?.name || "Por definir",
+                awayTeam: apiMatch.awayTeam?.name || "Por definir",
+                homeTeamShortName: apiMatch.homeTeam?.shortName || "",
+                awayTeamShortName: apiMatch.awayTeam?.shortName || "",
+                startDate: apiMatch.utcDate,
+                status: apiMatch.status,
+                stage: apiMatch.stage,
+                group: apiMatch.group,
+                matchday: apiMatch.matchday,
+            };
+
+            // Solo sobreescribir scores y status si la API los provee con valores reales
+            const apiHome = apiMatch.score?.fullTime?.home;
+            const apiAway = apiMatch.score?.fullTime?.away;
+            if (apiHome !== null && apiHome !== undefined && apiAway !== null && apiAway !== undefined) {
+                updateData.homeGoals = apiHome;
+                updateData.awayGoals = apiAway;
+                updateData.winner = apiMatch.score?.winner ?? null;
+                updateData.status = apiMatch.status;
+            } else {
+                // Si la API no trae scores, no tocar status (puede estar FINISHED manual)
+                delete updateData.status;
+            }
+
             const match = await Match.findOneAndUpdate(
                 { apiMatchId: apiMatch.id },
-                {
-                    apiMatchId: apiMatch.id,
-                    homeTeam: apiMatch.homeTeam?.name || "Por definir",
-                    awayTeam: apiMatch.awayTeam?.name || "Por definir",
-                    homeTeamShortName: apiMatch.homeTeam?.shortName || "",
-                    awayTeamShortName: apiMatch.awayTeam?.shortName || "",
-                    startDate: apiMatch.utcDate,
-                    status: apiMatch.status,
-                    stage: apiMatch.stage,
-                    group: apiMatch.group,
-                    matchday: apiMatch.matchday,
-                    homeGoals: apiMatch.score?.fullTime?.home ?? null,
-                    awayGoals: apiMatch.score?.fullTime?.away ?? null,
-                    winner: apiMatch.score?.winner ?? null
-                },
+                updateData,
                 {
                     upsert: true,
                     new: true

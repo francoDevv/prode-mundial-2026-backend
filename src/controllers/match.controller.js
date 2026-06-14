@@ -152,29 +152,26 @@ export const getTodayMatches = async (req, res) => {
         const cached = getCache("matches:today");
         if (cached) return res.status(200).json(cached);
 
-        const today = new Date();
+        const now = new Date();
+        const offsetMs = -3 * 60 * 60 * 1000; // UTC-3 Argentina
+        const localNow = new Date(now.getTime() + offsetMs);
+        const localDateStr = localNow.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
-        const startOfDay = new Date(today);
-        startOfDay.setHours(0, 0, 0, 0);
-
-        const endOfDay = new Date(today);
-        endOfDay.setHours(23, 59, 59, 999);
+        const startOfDay = new Date(`${localDateStr}T00:00:00.000-03:00`);
+        const endOfDay = new Date(`${localDateStr}T23:59:59.999-03:00`);
 
         const matches = await Match.find({
             startDate: { $gte: startOfDay, $lte: endOfDay }
         }).sort({ startDate: 1 });
 
-        let response;
+        const upcomingMatches = await Match.find({
+            status: "TIMED",
+            startDate: { $gt: endOfDay }
+        })
+            .sort({ startDate: 1 })
+            .limit(5);
 
-        if (matches.length === 0) {
-            const upcomingMatches = await Match.find({ status: "TIMED" })
-                .sort({ startDate: 1 })
-                .limit(5);
-
-            response = { matches, upcomingMatches };
-        } else {
-            response = { matches, upcomingMatches: [] };
-        }
+        const response = { matches, upcomingMatches };
 
         setCache("matches:today", response);
         res.status(200).json(response);
